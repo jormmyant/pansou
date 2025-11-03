@@ -816,7 +816,12 @@ func extractLinkTitlePairsWithoutNewlines(content string) map[string]string {
 	
 	// 查找每个链接的位置，并提取链接前的文本作为段落
 	for i, link := range links {
-		pos := strings.Index(content[lastPos:], link) + lastPos
+		idx := strings.Index(content[lastPos:], link)
+		if idx == -1 {
+			// 链接在content中不存在，跳过
+			continue
+		}
+		pos := idx + lastPos
 		if pos > lastPos {
 			segments[i] = content[lastPos:pos]
 		}
@@ -1058,12 +1063,20 @@ func mergeResultsByType(results []model.SearchResult, keyword string, cloudTypes
 				source = "unknown"
 			}
 			
-			// 创建合并后的链接
+			// 赋值给Note前，支持多个关键词裁剪
+			title = util.CutTitleByKeywords(title, []string{"简介", "描述"})
+			
+			// 优先使用链接自己的时间，如果没有则使用搜索结果的时间
+			linkDatetime := result.Datetime
+			if !link.Datetime.IsZero() {
+				linkDatetime = link.Datetime
+			}
+			
 			mergedLink := model.MergedLink{
 				URL:      link.URL,
 				Password: link.Password,
 				Note:     title, // 使用找到的特定标题
-				Datetime: result.Datetime,
+				Datetime: linkDatetime,
 				Source:   source, // 添加数据来源字段
 				Images:   result.Images, // 添加TG消息中的图片链接
 			}
@@ -1221,6 +1234,11 @@ func (s *SearchService) searchPlugins(keyword string, plugins []string, forceRef
 	if ext == nil {
 		ext = make(map[string]interface{})
 	}
+
+	// 关键：将forceRefresh同步到插件ext["refresh"]
+    if forceRefresh {
+        ext["refresh"] = true
+    }
 	
 	// 生成缓存键
 	cacheKey := cache.GeneratePluginCacheKey(keyword, plugins)
@@ -1487,5 +1505,6 @@ func calculateTimeScore(datetime time.Time) float64 {
 		return 20   // 1年以上
 	}
 }
+
 
 
