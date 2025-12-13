@@ -100,6 +100,7 @@ import (
 	_ "pansou/plugin/lou1"
 	_ "pansou/plugin/yiove"
 	_ "pansou/plugin/zxzj"
+	_ "pansou/plugin/qingying"
 )
 
 // 全局缓存写入管理器
